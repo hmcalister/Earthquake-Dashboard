@@ -65,13 +65,19 @@
 
             const stationPanel = document.getElementById("station-panel");
             const panelTitle = document.getElementById("station-panel-title");
-            const panelSubtitle = document.getElementById("station-panel-subtitle");
-            const panelMeasuredAt = document.getElementById("station-panel-measured-at");
+            const panelSubtitle = document.getElementById(
+                "station-panel-subtitle",
+            );
+            const panelMeasuredAt = document.getElementById(
+                "station-panel-measured-at",
+            );
             const panelBody = document.getElementById("station-panel-body");
 
             document
                 .getElementById("station-panel-close")
-                .addEventListener("click", () => stationPanel.classList.remove("open"));
+                .addEventListener("click", () =>
+                    stationPanel.classList.remove("open"),
+                );
 
             function openStationPanel(s) {
                 stationPanel.classList.add("open");
@@ -105,7 +111,12 @@
                             panelBody.appendChild(block);
 
                             requestAnimationFrame(() =>
-                                drawTrace(canvas, t.data, t.start_time, t.end_time),
+                                drawTrace(
+                                    canvas,
+                                    t.data,
+                                    t.start_time,
+                                    t.end_time,
+                                ),
                             );
                         });
                     })
@@ -138,11 +149,16 @@
 
                 // Symmetric Y axis centred on 0: range is [-peak, +peak]
                 const peak =
-                    Math.max(Math.abs(Math.min(...data)), Math.abs(Math.max(...data))) || 1;
-                const toY = (v) => marginT + (1 - (v + peak) / (2 * peak)) * plotH;
+                    Math.max(
+                        Math.abs(Math.min(...data)),
+                        Math.abs(Math.max(...data)),
+                    ) || 1;
+                const toY = (v) =>
+                    marginT + (1 - (v + peak) / (2 * peak)) * plotH;
 
-                const axisColor = getComputedStyle(document.documentElement)
-                    .getPropertyValue("--text-color-light");
+                const axisColor = getComputedStyle(
+                    document.documentElement,
+                ).getPropertyValue("--text-color-light");
                 ctx.font = "10px system-ui, sans-serif";
                 ctx.strokeStyle = axisColor;
                 ctx.fillStyle = axisColor;
@@ -169,7 +185,11 @@
                     ctx.stroke();
                     ctx.textAlign = "right";
                     ctx.textBaseline = "middle";
-                    ctx.fillText(v === 0 ? "0" : v.toExponential(1), marginL - 8, y);
+                    ctx.fillText(
+                        v === 0 ? "0" : v.toExponential(1),
+                        marginL - 8,
+                        y,
+                    );
                 });
 
                 // X axis labels: start and end time (HH:MM:SS)
@@ -178,7 +198,11 @@
                 ctx.textAlign = "left";
                 ctx.fillText(fmtTime(startTime), marginL, marginT + plotH + 3);
                 ctx.textAlign = "right";
-                ctx.fillText(fmtTime(endTime), marginL + plotW, marginT + plotH + 3);
+                ctx.fillText(
+                    fmtTime(endTime),
+                    marginL + plotW,
+                    marginT + plotH + 3,
+                );
 
                 // Trace
                 ctx.strokeStyle = "#2a8a9a";
@@ -195,7 +219,9 @@
             // Station markers
             // ================================================================
 
-            const stationCluster = L.markerClusterGroup({ maxClusterRadius: 40 });
+            const stationCluster = L.markerClusterGroup({
+                maxClusterRadius: 40,
+            });
 
             fetch("/api/stations")
                 .then((r) => r.json())
