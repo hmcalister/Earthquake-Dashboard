@@ -68,12 +68,12 @@ while True:
     num_batches = len(batches)
     inter_batch_delay = DATA_WINDOW_SECONDS / num_batches
 
-    end_time = UTCDateTime()
-    start_time = end_time - DATA_WINDOW_SECONDS
-
     print(f"\n=== Cycle {cycle + 1} | {num_batches} batches ===")
 
     for batch_idx, batch in enumerate(batches):
+        end_time = UTCDateTime()
+        start_time = end_time - DATA_WINDOW_SECONDS
+
         bulk = [
             (s.network_code, s.station_code, "*", "*", start_time, end_time)
             for s in batch
