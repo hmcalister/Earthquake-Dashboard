@@ -34,6 +34,13 @@ header {
     flex-shrink: 0;
 }
 
+#utc-clock {
+    margin-left: auto;
+    font-size: 1rem;
+    color: var(--text-color-muted, #aaa);
+    font-variant-numeric: tabular-nums;
+}
+
 header h1 {
     font-size: 1.5rem;
     font-weight: 600;
