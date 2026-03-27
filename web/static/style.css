@@ -24,9 +24,8 @@ body {
 }
 
 header {
-    padding: 0.75rem 1.25rem;
+    padding: 1rem;
     background: var(--background-color-dark);
-    border-bottom: 1px solid var(--background-color-dark);
     display: flex;
     align-items: center;
     gap: 1.5rem;
@@ -37,7 +36,7 @@ header {
 #utc-clock {
     margin-left: auto;
     font-size: 1rem;
-    color: var(--text-color-muted, #aaa);
+    color: var(--text-color-light-secondary);
     font-variant-numeric: tabular-nums;
 }
 
@@ -59,40 +58,32 @@ header h1 {
 
 /* ---- Station panel ---- */
 
-#main-content {
-    position: relative;
-}
-
 #station-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: var(--station-panel-width);
+    width: 0;
+    overflow: hidden;
     background: var(--background-color-dark);
-    border-left: 1px solid var(--background-color-dark);
     display: flex;
     flex-direction: column;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    z-index: 1000;
+    flex-shrink: 0;
+    transition: width 0.3s ease;
 }
 
 #station-panel.open {
-    transform: translateX(0);
+    width: var(--station-panel-width);
 }
 
 #station-panel-header {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem;
     border-bottom: 1px solid var(--background-color-dark);
     flex-shrink: 0;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.5rem;
+    min-width: var(--station-panel-width);
 }
 
-#station-panel-close {
+#station-panel-close-button {
     display: block;
     background: none;
     border: none;
@@ -109,13 +100,7 @@ header h1 {
     font-weight: 600;
 }
 
-#station-panel-subtitle {
-    font-size: 0.75rem;
-    color: var(--text-color-light-secondary);
-    margin-top: 0.25rem;
-}
-
-#station-panel-measured-at {
+.station-panel-subtext {
     font-size: 0.75rem;
     color: var(--text-color-light-secondary);
     margin-top: 0.25rem;
@@ -127,6 +112,7 @@ header h1 {
     flex: 1;
     font-size: 1rem;
     text-align: center;
+    min-width: var(--station-panel-width);
 }
 
 .channel-block {
@@ -151,26 +137,30 @@ header h1 {
 
 /* Value must match --mobile-breakpoint in :root */
 @media (max-width: 1200px) {
+    #main-content {
+        flex-direction: column;
+    }
+
     #station-panel {
-        top: auto;
-        right: 0;
-        left: 0;
-        bottom: 0;
         width: 100%;
-        height: var(--station-panel-mobile-height);
+        height: 0;
         border-left: none;
-        border-top: 1px solid #333;
-        transform: translateY(100%);
+        transition: height 0.3s ease;
     }
 
     #station-panel.open {
-        transform: translateY(0);
+        width: 100%;
+        height: var(--station-panel-mobile-height);
+    }
+
+    #station-panel-header,
+    #station-panel-body {
+        min-width: unset;
     }
 
     #station-panel-body {
         -webkit-overflow-scrolling: touch;
         margin: 0 auto;
-        width: 75vw;
     }
 }
 
