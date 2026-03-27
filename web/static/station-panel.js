@@ -7,7 +7,7 @@ const panelMeasuredAt = document.getElementById("station-panel-measured-at");
 const panelBody = document.getElementById("station-panel-body");
 
 document
-  .getElementById("station-panel-close")
+  .getElementById("station-panel-close-button")
   .addEventListener("click", () => closeStationPanel());
 
 export function closeStationPanel() {

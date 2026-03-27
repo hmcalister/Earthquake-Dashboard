@@ -24,8 +24,8 @@ function selectStation(code) {
     if (activeMarker) activeMarker.setStyle(defaultStyle);
     activeMarker = markersByCode[code];
     activeMarker.setStyle(activeStyle);
-    map.setView([s.latitude, s.longitude]);
     openStationPanel(s);
+    map.setView([s.latitude, s.longitude]);
   }
 }
 
