@@ -1,29 +1,24 @@
 # %% Imports
 
 import pathlib
-import pickle
-
 import pandas as pd
 from obspy.clients.fdsn import Client
 
-REQUESTS_BASE_DIR = pathlib.Path("../data/station_requests")
+SAVE_BASE_DIR = pathlib.Path("../data")
 
 # %% Make Requests
 
 client = Client("GEONET")
 station_inventory = client.get_stations(level="channel")
-
-with open(REQUESTS_BASE_DIR.joinpath("stations.pkl"), "wb") as f:
-    pickle.dump(station_inventory, f)
+if station_inventory is None:
+    print("client did not respond")
+    exit()
 
 # %% Process to DataFrame
 
-with open(REQUESTS_BASE_DIR.joinpath("stations.pkl"), "rb") as f:
-    inventory = pickle.load(f)
-
 station_rows = []
 channel_rows = []
-for network in inventory:
+for network in station_inventory:
     for station in network:
         station_rows.append(
             {
@@ -66,13 +61,13 @@ for network in inventory:
 station_df = pd.DataFrame(station_rows)
 station_df["start_date"] = pd.to_datetime(station_df["start_date"], utc=True)
 station_df["end_date"] = pd.to_datetime(station_df["end_date"], utc=True)
-station_df.to_parquet("../data/stations.parquet", index=False)
+station_df.to_parquet(SAVE_BASE_DIR / "stations.parquet", index=False)
 print(station_df)
 
 channel_df = pd.DataFrame(channel_rows)
 channel_df["start_date"] = pd.to_datetime(channel_df["start_date"], utc=True)
 channel_df["end_date"] = pd.to_datetime(channel_df["end_date"], utc=True)
-channel_df.to_parquet("../data/channels.parquet", index=False)
+channel_df.to_parquet(SAVE_BASE_DIR / "channels.parquet", index=False)
 print(channel_df)
 
 
