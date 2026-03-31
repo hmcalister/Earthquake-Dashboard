@@ -3,3 +3,5 @@ uvicorn[standard]
 obspy
 pandas
 pyarrow
+sqlite3
+aiosql
