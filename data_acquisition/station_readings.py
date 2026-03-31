@@ -15,8 +15,6 @@ CHANNELS_DATA_FILE_PATH = pathlib.Path("../data/channels.parquet")
 
 SAVE_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
-# REDUCED BATCH SIZE: 32 stations x 1 hour of data is very heavy.
-# Reducing this prevents RAM spikes.
 REQUEST_BATCH_SIZE = 8
 REQUEST_TIMEOUT_SECONDS = 300.0
 DATA_WINDOW_SECONDS = 3600.0
@@ -47,7 +45,6 @@ CHANNEL_PRIORITY = {"HHZ": 0, "HHN": 1, "HHE": 2, "HNZ": 3, "HNN": 4, "HNE": 5}
 
 # %% Continuous acquisition loop
 
-# Initialize client once
 client = Client("https://service-nrt.geonet.org.nz", timeout=REQUEST_TIMEOUT_SECONDS)
 
 station_list = load_active_stations(STATIONS_DATA_FILE_PATH, CHANNELS_DATA_FILE_PATH)
@@ -80,18 +77,14 @@ while True:
         ]
 
         try:
-            # REMOVED: ThreadPoolExecutor overhead.
-            # get_waveforms_bulk is already an optimized network call.
             stream = client.get_waveforms_bulk(bulk)
 
             for station in batch:
-                # Use select to get station traces
                 station_stream = stream.select(station=station.station_code)
 
                 if not station_stream:
                     continue
 
-                # Detrending is CPU intensive; doing it per station keeps it manageable
                 station_stream.detrend("demean")
                 station_stream.traces.sort(
                     key=lambda tr: CHANNEL_PRIORITY.get(tr.stats.channel, 99)
@@ -104,7 +97,6 @@ while True:
                 station_stream.write(str(save_path), format="MSEED")
                 print(f"  Saved {station.station_code}")
 
-            # CRITICAL: Clear memory after each batch
             del stream
             gc.collect()
 
