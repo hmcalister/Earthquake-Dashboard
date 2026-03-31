@@ -1,60 +1,48 @@
 # %% Imports
 import pathlib
-import pickle
+import sqlite3
+import time
 
-import pandas as pd
+import aiosql
 from obspy import Catalog, UTCDateTime
 from obspy.clients.fdsn import Client
 
-REQUESTS_BASE_DIR = pathlib.Path("../data/requests")
+# Settings
+DATABASE = pathlib.Path("../data/earthquakes.sqlite")
+QUERIES_FILE = pathlib.Path("../data/queries.sql")
+
+queries = aiosql.from_path(QUERIES_FILE, "sqlite3")
+
+REQUEST_PERIOD = 3600.0
+DATA_WINDOW_SECONDS = 2*REQUEST_PERIOD
+REQUEST_TIMEOUT_SECONDS = 300.0
 
 # %% Make Requests
 
-client = Client("GEONET")
-date_strs = [
-    "2025-01-01",
-    "2025-02-01",
-    "2025-03-01",
-    "2025-04-01",
-    "2025-05-01",
-    "2025-06-01",
-    "2025-07-01",
-    "2025-08-01",
-    "2025-09-01",
-    "2025-10-01",
-    "2025-11-01",
-    "2025-12-01",
-    "2026-01-01",
-]
+client = Client("GEONET", timeout=REQUEST_TIMEOUT_SECONDS)
+cycle = 0
 
-for start_date_str, end_date_str in zip(date_strs, date_strs[1:]):
-    print(f"REQUESTING DATA {start_date_str}")
+while True:
+    print(f"\n=== Cycle {cycle + 1} ===")
+
+    end_time = UTCDateTime()
+    start_time = end_time - DATA_WINDOW_SECONDS
+
+    print("Sending request")
 
     request_response = client.get_events(
-        starttime=UTCDateTime(start_date_str),
-        endtime=UTCDateTime(end_date_str),
-        minmagnitude=5.0,
+        starttime=start_time,
+        endtime=end_time,
     )
 
     if request_response is None:
-        print("\tREQUEST FAILED")
+        print("Request failed!")
         continue
 
-    month_catalog: Catalog = request_response
+    catalog: Catalog = request_response
 
-    print("\tREQUEST COMPLETE")
-
-    with open(REQUESTS_BASE_DIR.joinpath(f"{start_date_str}.pkl"), "wb") as f:
-        pickle.dump(month_catalog, f)
-
-# %% Process to Events
-
-rows = []
-for filepath in REQUESTS_BASE_DIR.glob("*.pkl"):
-    with open(filepath, "rb") as f:
-        month_catalog: Catalog = pickle.load(f)
-
-    for event in month_catalog:
+    rows = []
+    for event in catalog:
         origin = event.preferred_origin()
         magnitude = event.preferred_magnitude()
         if origin is None or magnitude is None:
@@ -62,7 +50,7 @@ for filepath in REQUESTS_BASE_DIR.glob("*.pkl"):
         rows.append(
             {
                 "event_id": str(event.resource_id),
-                "time": origin.time.datetime,
+                "time": origin.time.datetime.isoformat(),
                 "latitude": origin.latitude,
                 "longitude": origin.longitude,
                 "depth_m": origin.depth,
@@ -71,8 +59,11 @@ for filepath in REQUESTS_BASE_DIR.glob("*.pkl"):
             }
         )
 
-df = pd.DataFrame(rows)
-df["time"] = pd.to_datetime(df["time"], utc=True)
-print(df)
+    with sqlite3.connect(DATABASE) as conn:
+        queries.upsert_earthquake(conn, rows)
+
+    print(f"Upserted {len(rows)} events")
+    cycle += 1
+    time.sleep(REQUEST_PERIOD)
 
 # %%
