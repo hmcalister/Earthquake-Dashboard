@@ -1,4 +1,4 @@
-import { openStationPanel, closeStationPanel } from "./station-panel.js";
+import { openStationPanel, resetStationPanel } from "./station-panel.js";
 
 const map = L.map("map").setView([-41.5, 172.5], 5);
 
@@ -38,7 +38,7 @@ function applyHash() {
       activeMarker.setStyle(defaultStyle);
       activeMarker = null;
     }
-    closeStationPanel();
+    resetStationPanel();
   }
 }
 
