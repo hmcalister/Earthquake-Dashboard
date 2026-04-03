@@ -40,8 +40,8 @@ TIMEFRAME_INTERVALS = {
 
 
 @app.get("/api/events")
-def get_events(timeframe: str = "24h"):
-    interval = TIMEFRAME_INTERVALS.get(timeframe, TIMEFRAME_INTERVALS["24h"])
+def get_events(timeframe: str = "1h"):
+    interval = TIMEFRAME_INTERVALS.get(timeframe, TIMEFRAME_INTERVALS["1h"])
     with sqlite3.connect(DATABASE) as conn:
         conn.row_factory = sqlite3.Row
         rows = queries.get_recent_earthquakes(conn, interval=interval)
