@@ -97,7 +97,7 @@ ORDER BY channel_code;
 -- :param interval: SQLite modifier string e.g. '-1 hour', '-24 hours', '-7 days'
 SELECT event_id, datetime, latitude, longitude, depth_m, magnitude, magnitude_type
 FROM earthquakes
-WHERE datetime >= datetime('now', :interval)
+WHERE datetime >= strftime('%Y-%m-%d %H:00:00', 'now', :interval)
 ORDER BY datetime DESC;
 
 -- name: insert_earthquake(event_id, datetime, latitude, longitude, depth_m, magnitude, magnitude_type)*!
