@@ -1,7 +1,9 @@
 import pathlib
-from datetime import datetime
+import sqlite3
+import zlib
 
-import pandas as pd
+import aiosql
+import numpy as np
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,9 +11,11 @@ from fastapi.staticfiles import StaticFiles
 app = FastAPI(title="Earthquake Dashboard")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-STATIONS_PATH = "../data/stations.parquet"
-READINGS_DIR = pathlib.Path("../data/current_readings")
+DATABASE = pathlib.Path("../data/earthquakes.sqlite")
+QUERIES_FILE = pathlib.Path("../data/queries.sql")
 MAX_PLOT_POINTS = 1000
+
+queries = aiosql.from_path(QUERIES_FILE, "sqlite3")
 
 
 @app.get("/", include_in_schema=False)
@@ -21,53 +25,39 @@ def root():
 
 @app.get("/api/stations")
 def get_stations():
-    df = pd.read_parquet(
-        STATIONS_PATH,
-        columns=[
-            "station_code",
-            "station_name",
-            "latitude",
-            "longitude",
-            "elevation_m",
-            "end_date",
-        ],
-    )
-    now = pd.Timestamp.now(tz="UTC")
-    df = df[df["end_date"].isna() | (df["end_date"] > now)]
-    df = df.drop(columns=["end_date"])
-    return df.to_dict(orient="records")
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = queries.get_stations_with_readings(conn)
+    return [dict(r) for r in rows]
 
 
 @app.get("/api/stations/{station_code}/readings")
 def get_station_readings(station_code: str):
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = list(queries.get_station_waveforms(conn, station_code=station_code))
 
-    matches = list(READINGS_DIR.glob(f"*.{station_code}.mseed"))
-    if not matches:
+    if not rows:
         return {"error": "No readings found for this station.", "traces": []}
 
-    try:
-        measured_at = datetime.fromtimestamp(matches[0].stat().st_mtime).strftime(
-            "%Y-%m-%d %H:%M:%S"
+    traces = []
+    measured_at = None
+    for row in rows:
+        raw = zlib.decompress(row["waveform"])
+        data = np.frombuffer(raw, dtype=np.float32).tolist()
+        if len(data) > MAX_PLOT_POINTS:
+            step = len(data) / MAX_PLOT_POINTS
+            data = [data[int(i * step)] for i in range(MAX_PLOT_POINTS)]
+        if measured_at is None or row["end_time"] > measured_at:
+            measured_at = row["end_time"]
+        traces.append(
+            {
+                "channel": row["channel_code"],
+                "sampling_rate": row["sample_rate"],
+                "start_time": row["start_time"],
+                "end_time": row["end_time"],
+                "data": data,
+            }
         )
-        from obspy import read as obspy_read
 
-        stream = obspy_read(str(matches[0]))
-        traces = []
-        for tr in stream:
-            data = tr.data.tolist()
-            # Downsample to MAX_PLOT_POINTS by taking evenly spaced indices
-            if len(data) > MAX_PLOT_POINTS:
-                step = len(data) / MAX_PLOT_POINTS
-                data = [data[int(i * step)] for i in range(MAX_PLOT_POINTS)]
-            traces.append(
-                {
-                    "channel": tr.stats.channel,
-                    "sampling_rate": tr.stats.sampling_rate,
-                    "start_time": str(tr.stats.starttime),
-                    "end_time": str(tr.stats.endtime),
-                    "data": data,
-                }
-            )
-        return {"measured_at": measured_at, "traces": traces}
-    except Exception as e:
-        return {"error": str(e), "traces": []}
+    return {"measured_at": measured_at, "traces": traces}
