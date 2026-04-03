@@ -31,6 +31,23 @@ def get_stations():
     return [dict(r) for r in rows]
 
 
+TIMEFRAME_INTERVALS = {
+    "1h": "-1 hour",
+    "24h": "-24 hours",
+    "1w": "-7 days",
+    "1m": "-30 days",
+}
+
+
+@app.get("/api/events")
+def get_events(timeframe: str = "24h"):
+    interval = TIMEFRAME_INTERVALS.get(timeframe, TIMEFRAME_INTERVALS["24h"])
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = queries.get_recent_earthquakes(conn, interval=interval)
+    return [dict(r) for r in rows]
+
+
 @app.get("/api/stations/{station_code}/readings")
 def get_station_readings(station_code: str):
     with sqlite3.connect(DATABASE) as conn:
