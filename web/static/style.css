@@ -229,6 +229,10 @@ header h1 {
         flex-direction: column;
     }
 
+    #utc-clock {
+        font-size: 0.5rem;
+    }
+
     #station-panel {
         width: 100%;
         height: var(--panel-mobile-height);
