@@ -1,5 +1,5 @@
 import { openStationPanel, resetStationPanel } from "./station-panel.js";
-import { openEventPanel, resetEventPanel, magnitudeColor } from "./event-panel.js";
+import { openEventPanel, resetEventPanel, getEventDescriptionString, magnitudeColor } from "./event-panel.js";
 
 const map = L.map("map").setView([-41.5, 172.5], 5);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -141,13 +141,7 @@ function loadEvents(timeframe) {
     .then((r) => r.json())
     .then((events) => {
       events.forEach((e) => {
-        const event_string = String(`
-          Event ID: ${e.event_id} <br>
-          Datetime: ${e.datetime}UTC <br>
-          Magnitude: ${e.magnitude.toFixed(1)} <br>
-          Location: ${e.latitude.toFixed(5)}, ${e.longitude.toFixed(5)} <br>
-          Depth: ${(e.depth_m / 1000).toFixed(2)} km <br>
-        `).trim();
+        const event_string = getEventDescriptionString(e);
 
         if (e.longitude < 0) {
           e.longitude += 360;

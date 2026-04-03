@@ -9,6 +9,16 @@ export function resetEventPanel() {
   activeRow = null;
 }
 
+export function getEventDescriptionString(event) {
+  return String(`
+    Event ID: ${event.event_id} <br>
+    Datetime: ${event.datetime.split('.')[0]} UTC <br>
+    Magnitude: ${event.magnitude.toFixed(1)} <br>
+    Location: ${event.latitude.toFixed(5)}, ${event.longitude.toFixed(5)} <br>
+    Depth: ${(event.depth_m / 1000).toFixed(2)} km <br>
+  `).trim();
+}
+
 export function openEventPanel(events, onSelect) {
   activeRow = null;
 
@@ -45,7 +55,7 @@ export function openEventPanel(events, onSelect) {
 
     const detail = document.createElement("div");
     detail.className = "event-detail";
-    detail.innerHTML = `Datetime: ${e.datetime} UTC<br>Location: ${e.latitude.toFixed(5)}, ${e.longitude.toFixed(5)}<br>Depth: ${(e.depth_m / 1000).toFixed(2)} km`;
+    detail.innerHTML = `Datetime: ${e.datetime.split('.')[0]} UTC<br>Location: ${e.latitude.toFixed(5)}, ${e.longitude.toFixed(5)}<br>Depth: ${(e.depth_m / 1000).toFixed(2)} km`;
 
     info.appendChild(event_id_header);
     info.appendChild(detail);
