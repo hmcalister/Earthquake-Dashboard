@@ -2,7 +2,6 @@
 import gc
 import pathlib
 import sqlite3
-import time
 import zlib
 from collections import namedtuple
 
@@ -18,10 +17,8 @@ QUERIES_FILE = pathlib.Path("../data/queries.sql")
 
 queries = aiosql.from_path(QUERIES_FILE, "sqlite3")
 
-REQUEST_BATCH_SIZE = 8
-REQUEST_TIMEOUT_SECONDS = 300.0
-DATA_WINDOW_SECONDS = 3600.0
-STATION_REFRESH_INTERVAL_CYCLES = 24
+REQUEST_BATCH_SIZE = 16
+REQUEST_TIMEOUT_SECONDS = 600.0
 
 Station = namedtuple("Station", ["network_code", "station_code"])
 
@@ -65,69 +62,55 @@ client = Client("https://service-nrt.geonet.org.nz", timeout=REQUEST_TIMEOUT_SEC
 
 station_list = load_active_stations()
 batches = make_batches(station_list, REQUEST_BATCH_SIZE)
+num_batches = len(batches)
 
-cycle = 0
+# Fetch the preceding full hour
+now = UTCDateTime()
+end_time = UTCDateTime(now.year, now.month, now.day, now.hour)
+start_time = end_time - 3600
 
-while True:
-    if cycle > 0 and cycle % STATION_REFRESH_INTERVAL_CYCLES == 0:
-        try:
-            station_list = load_active_stations()
-            batches = make_batches(station_list, REQUEST_BATCH_SIZE)
-        except Exception as e:
-            print(f"[station refresh] Error: {e}")
+print(f"Fetching station readings from {start_time} to {end_time} | {num_batches} batches")
 
-    num_batches = len(batches)
-    inter_batch_delay = DATA_WINDOW_SECONDS / num_batches
+for batch_idx, batch in enumerate(batches):
+    bulk = [
+        (s.network_code, s.station_code, "*", "*", start_time, end_time)
+        for s in batch
+    ]
 
-    print(f"\n=== Cycle {cycle + 1} | {num_batches} batches ===")
+    try:
+        stream = client.get_waveforms_bulk(bulk)
 
-    for batch_idx, batch in enumerate(batches):
-        end_time = UTCDateTime()
-        start_time = end_time - DATA_WINDOW_SECONDS
+        rows = []
+        for station in batch:
+            station_stream = stream.select(station=station.station_code)
 
-        bulk = [
-            (s.network_code, s.station_code, "*", "*", start_time, end_time)
-            for s in batch
-        ]
+            if not station_stream:
+                continue
 
-        try:
-            stream = client.get_waveforms_bulk(bulk)
+            station_stream.detrend("demean")
+            station_stream.traces.sort(
+                key=lambda tr: CHANNEL_PRIORITY.get(tr.stats.channel, 99)
+            )
 
-            rows = []
-            for station in batch:
-                station_stream = stream.select(station=station.station_code)
-
-                if not station_stream:
+            written_traces = 0
+            for tr in station_stream:
+                if tr.stats.channel not in CHANNEL_PRIORITY:
                     continue
+                written_traces += 1
+                rows.append(trace_to_row(tr))
 
-                station_stream.detrend("demean")
-                station_stream.traces.sort(
-                    key=lambda tr: CHANNEL_PRIORITY.get(tr.stats.channel, 99)
-                )
+            print(f"  Processed {station.station_code} ({len(station_stream)} traces found, {written_traces} traces saved)")
 
-                written_traces = 0
-                for tr in station_stream:
-                    if tr.stats.channel not in CHANNEL_PRIORITY:
-                        continue
-                    written_traces += 1
-                    rows.append(trace_to_row(tr))
+        if rows:
+            with sqlite3.connect(DATABASE) as conn:
+                queries.upsert_channel_waveform(conn, rows)
 
-                print(f"  Processed {station.station_code} ({len(station_stream)} traces found, {written_traces} traces saved)")
+        del stream
+        gc.collect()
 
-            if rows:
-                with sqlite3.connect(DATABASE) as conn:
-                    queries.upsert_channel_waveform(conn, rows)
-
-            del stream
-            gc.collect()
-
-        except FDSNNoDataException:
-            print(f"  [batch {batch_idx + 1}] No data")
-        except Exception as e:
-            print(f"  [batch {batch_idx + 1}] Error: {e}")
-
-        time.sleep(inter_batch_delay)
-
-    cycle += 1
+    except FDSNNoDataException:
+        print(f"  [batch {batch_idx + 1}] No data")
+    except Exception as e:
+        print(f"  [batch {batch_idx + 1}] Error: {e}")
 
 # %%

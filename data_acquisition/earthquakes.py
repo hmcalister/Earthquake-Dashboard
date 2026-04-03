@@ -1,7 +1,6 @@
 # %% Imports
 import pathlib
 import sqlite3
-import time
 
 import aiosql
 from obspy import Catalog, UTCDateTime
@@ -14,35 +13,29 @@ QUERIES_FILE = pathlib.Path("../data/queries.sql")
 
 queries = aiosql.from_path(QUERIES_FILE, "sqlite3")
 
-REQUEST_PERIOD = 5 * 60
-DATA_WINDOW_SECONDS = 10 * REQUEST_PERIOD
 REQUEST_TIMEOUT_SECONDS = 300.0
+INTERVAL_SAFETY_FACTOR = 1.5
 
 # %% Make Requests
 
 client = Client("GEONET", timeout=REQUEST_TIMEOUT_SECONDS)
-cycle = 0
 
-while True:
-    end_time = UTCDateTime()
-    start_time = end_time - DATA_WINDOW_SECONDS
+# Fetch the preceding full hour
+now = UTCDateTime()
+end_time = UTCDateTime(now.year, now.month, now.day, now.hour)
+start_time = end_time - 3600 * INTERVAL_SAFETY_FACTOR
 
-    print(f"\n=== Cycle {cycle + 1}, Datetime {end_time} ===")
+print(f"Fetching earthquakes from {start_time} to {end_time}")
 
+try:
+    request_response = client.get_events(
+        starttime=start_time,
+        endtime=end_time,
+    )
 
-    print("Sending request")
-
-    try:
-        request_response = client.get_events(
-            starttime=start_time,
-            endtime=end_time,
-        )
-
-        if request_response is None:
-            print("Request failed!")
-            continue
-
-
+    if request_response is None:
+        print("Request failed!")
+    else:
         catalog: Catalog = request_response
 
         rows = []
@@ -68,13 +61,9 @@ while True:
 
         print(f"Inserted {len(rows)} events")
 
-
-    except FDSNNoDataException:
-        print("Error: no data in request")
-    except Exception as e:
-        print(f"Error: {e}")
-
-    time.sleep(REQUEST_PERIOD)
-    cycle += 1
+except FDSNNoDataException:
+    print("Error: no data in request")
+except Exception as e:
+    print(f"Error: {e}")
 
 # %%
