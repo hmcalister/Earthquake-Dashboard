@@ -76,6 +76,9 @@ fetch("/api/stations")
   .then((stations) => {
     stations.forEach((s) => {
       stationsByCode[s.station_code] = s;
+      if (s.longitude < 0) {
+        s.longitude += 360;
+      }
       const marker = L.circleMarker([s.latitude, s.longitude], {
         radius: 10,
         color: "#111",
