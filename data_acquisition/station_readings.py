@@ -18,9 +18,9 @@ QUERIES_FILE = pathlib.Path("../data/queries.sql")
 queries = aiosql.from_path(QUERIES_FILE, "sqlite3")
 
 REQUEST_TIMEOUT_SECONDS = 600.0
+BATCH_SIZE = 32
 
 CHANNEL_PRIORITY = {"HHZ": 0, "HHN": 1, "HHE": 2, "HNZ": 3, "HNN": 4, "HNE": 5}
-
 Station = namedtuple("Station", ["network_code", "station_code"])
 
 # %% Helpers
@@ -29,6 +29,12 @@ def load_active_stations() -> list:
     with sqlite3.connect(DATABASE) as conn:
         rows = queries.get_active_stations_with_target_channels(conn)
     return [Station(network_code=r[0], station_code=r[1]) for r in rows]
+
+def batch_stations(all_stations: list) -> list[list]:
+    batched_stations = []
+    for index in range(0, len(all_stations), BATCH_SIZE):
+        batched_stations.append(all_stations[index:min(index+BATCH_SIZE, len(all_stations))])
+    return batched_stations
 
 def trace_to_row(tr) -> dict:
     samples = tr.data.astype(np.float32)
@@ -47,51 +53,53 @@ def trace_to_row(tr) -> dict:
 
 client = Client("https://service-nrt.geonet.org.nz", timeout=REQUEST_TIMEOUT_SECONDS)
 station_list = load_active_stations()
+batched_station_list = batch_stations(station_list)
 
 # Fetch the preceding full hour
 now = UTCDateTime()
 end_time = UTCDateTime(now.year, now.month, now.day, now.hour)
 start_time = end_time - 3600
 
-print(f"Fetching station readings from {start_time} to {end_time} | {len(station_list)} stations")
+print(f"Fetching station readings from {start_time} to {end_time} | {len(station_list)} stations | {len(batched_station_list)} batches")
 
-bulk = [
-    (s.network_code, s.station_code, "*", "H??", start_time, end_time)
-    for s in station_list
-]
+for batch_index, batch in enumerate(batched_station_list):
+    print(f"Batch {batch_index+1:03d} / {len(batched_station_list):03d}")
 
-try:
-    stream = client.get_waveforms_bulk(bulk)
+    bulk = [
+        (s.network_code, s.station_code, "*", "H??", start_time, end_time)
+        for s in batch
+    ]
 
-    rows = []
-    for station in station_list:
-        station_stream = stream.select(station=station.station_code)
+    try:
+        stream = client.get_waveforms_bulk(bulk)
 
-        if not station_stream:
-            continue
+        rows = []
+        for station in batch:
+            station_stream = stream.select(station=station.station_code)
 
-        station_stream.detrend("demean")
-        station_stream.traces.sort(
-            key=lambda tr: CHANNEL_PRIORITY.get(tr.stats.channel, 99)
-        )
+            if not station_stream:
+                continue
 
-        written_traces = 0
-        for tr in station_stream:
-            written_traces += 1
-            rows.append(trace_to_row(tr))
+            station_stream.detrend("demean")
+            station_stream.traces.sort(
+                key=lambda tr: CHANNEL_PRIORITY.get(tr.stats.channel, 99)
+            )
 
-        print(f"  Processed {station.station_code} ({len(station_stream)} traces found, {written_traces} traces saved)")
+            written_traces = 0
+            for tr in station_stream:
+                written_traces += 1
+                rows.append(trace_to_row(tr))
 
-    if rows:
-        with sqlite3.connect(DATABASE) as conn:
-            queries.upsert_channel_waveform(conn, rows)
+            print(f"  Processed {station.station_code} ({len(station_stream)} traces found, {written_traces} traces saved)")
 
-    del stream
-    gc.collect()
+        if rows:
+            with sqlite3.connect(DATABASE) as conn:
+                queries.upsert_channel_waveform(conn, rows)
 
-except FDSNNoDataException:
-    print("No data")
-except Exception as e:
-    print(f"Error: {e}")
+        del stream
+        gc.collect()
 
-# %%
+    except FDSNNoDataException:
+        print("No data")
+    except Exception as e:
+        print(f"Error: {e}")
