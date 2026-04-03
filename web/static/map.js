@@ -171,7 +171,7 @@ function loadEvents(timeframe) {
 
 timeframeSelect.addEventListener("change", () => loadEvents(timeframeSelect.value));
 
-const initialTimeframe = new URLSearchParams(location.search).get("timeframe") || "24h";
+const initialTimeframe = new URLSearchParams(location.search).get("timeframe") || "1h";
 timeframeSelect.value = initialTimeframe;
 loadEvents(initialTimeframe);
 
