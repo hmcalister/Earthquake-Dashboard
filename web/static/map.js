@@ -141,13 +141,17 @@ function loadEvents(timeframe) {
     .then((r) => r.json())
     .then((events) => {
       events.forEach((e) => {
-        const event_string = `
+        const event_string = String(`
           Event ID: ${e.event_id} <br>
           Datetime: ${e.datetime}UTC <br>
           Magnitude: ${e.magnitude.toFixed(1)} <br>
           Location: ${e.latitude.toFixed(5)}, ${e.longitude.toFixed(5)} <br>
           Depth: ${(e.depth_m / 1000).toFixed(2)} km <br>
-        `.trim();
+        `).trim();
+
+        if (e.longitude < 0) {
+          e.longitude += 360;
+        }
         const marker = L.circleMarker([e.latitude, e.longitude], {
           radius: Math.max(5, e.magnitude * 3),
           color: "#111",
@@ -158,7 +162,6 @@ function loadEvents(timeframe) {
           .bindTooltip(event_string)
           .bindPopup(event_string)
           .on("click", () => selectEvent(e.event_id));
-        marker._mag = e.magnitude;
         eventsByShortID[eventShortID(e.event_id)] = e.event_id;
         eventMarkersByID[e.event_id] = marker;
         marker.addTo(eventMarkers);
