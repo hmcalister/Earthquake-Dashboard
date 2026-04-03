@@ -53,6 +53,14 @@ SELECT network_code, station_code, station_name, latitude, longitude, elevation_
 FROM stations
 WHERE end_date IS NULL OR end_date > CURRENT_TIMESTAMP;
 
+-- name: get_active_stations_with_target_channels()
+SELECT DISTINCT s.network_code, s.station_code, s.station_name, s.latitude, s.longitude, s.elevation_m
+FROM stations s
+INNER JOIN channels c ON c.network_code = s.network_code AND c.station_code = s.station_code
+WHERE (s.end_date IS NULL OR s.end_date > CURRENT_TIMESTAMP)
+  AND c.active = 1
+  AND c.channel_code IN ('HHZ', 'HHN', 'HHE', 'HNZ', 'HNN', 'HNE');
+
 -- name: get_stations_with_readings()
 SELECT DISTINCT s.network_code, s.station_code, s.station_name, s.latitude, s.longitude, s.elevation_m
 FROM stations s
