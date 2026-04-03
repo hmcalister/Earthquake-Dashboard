@@ -39,15 +39,15 @@ export function openEventPanel(events, onSelect) {
     const info = document.createElement("div");
     info.className = "event-info";
 
-    const loc = document.createElement("div");
-    loc.className = "event-location";
-    loc.textContent = `${e.latitude.toFixed(3)}, ${e.longitude.toFixed(3)}`;
+    const event_id_header = document.createElement("div");
+    event_id_header.className = "event-id-header";
+    event_id_header.textContent = `Event ID: ${e.event_id}`;
 
     const detail = document.createElement("div");
     detail.className = "event-detail";
-    detail.textContent = `${e.datetime} UTC  ·  depth ${(e.depth_m / 1000).toFixed(1)} km  ·  ${e.magnitude_type}`;
+    detail.innerHTML = `Datetime: ${e.datetime} UTC<br>Location: ${e.latitude.toFixed(5)}, ${e.longitude.toFixed(5)}<br>Depth: ${(e.depth_m / 1000).toFixed(2)} km`;
 
-    info.appendChild(loc);
+    info.appendChild(event_id_header);
     info.appendChild(detail);
     row.appendChild(mag);
     row.appendChild(info);

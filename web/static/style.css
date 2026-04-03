@@ -205,7 +205,7 @@ header h1 {
 .event-magnitude[data-mag-class="moderate"] { color: #e67e22; }
 .event-magnitude[data-mag-class="minor"] { color: #f1c40f; }
 
-.event-info {
+.event-id-header {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;

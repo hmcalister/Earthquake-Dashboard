@@ -145,7 +145,8 @@ function loadEvents(timeframe) {
           Event ID: ${e.event_id} <br>
           Datetime: ${e.datetime}UTC <br>
           Magnitude: ${e.magnitude.toFixed(1)} <br>
-          Depth: ${(e.depth_m / 1000).toFixed(1)} km <br>
+          Location: ${e.latitude.toFixed(5)}, ${e.longitude.toFixed(5)} <br>
+          Depth: ${(e.depth_m / 1000).toFixed(2)} km <br>
         `.trim();
         const marker = L.circleMarker([e.latitude, e.longitude], {
           radius: Math.max(5, e.magnitude * 3),
