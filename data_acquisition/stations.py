@@ -1,10 +1,15 @@
 # %% Imports
 
 import pathlib
-import pandas as pd
+import sqlite3
+
+import aiosql
 from obspy.clients.fdsn import Client
 
-SAVE_BASE_DIR = pathlib.Path("../data")
+DATABASE = pathlib.Path("../data/earthquakes.sqlite")
+QUERIES_FILE = pathlib.Path("../data/queries.sql")
+
+queries = aiosql.from_path(QUERIES_FILE, "sqlite3")
 
 # %% Make Requests
 
@@ -14,7 +19,7 @@ if station_inventory is None:
     print("client did not respond")
     exit()
 
-# %% Process to DataFrame
+# %% Process and Write to Database
 
 station_rows = []
 channel_rows = []
@@ -29,10 +34,12 @@ for network in station_inventory:
                 "longitude": station.longitude,
                 "elevation_m": station.elevation,
                 "total_channels": station.total_number_of_channels,
-                "start_date": station.start_date.datetime
+                "start_date": station.start_date.datetime.isoformat()
                 if station.start_date
                 else None,
-                "end_date": station.end_date.datetime if station.end_date else None,
+                "end_date": station.end_date.datetime.isoformat()
+                if station.end_date
+                else None,
                 "description": station.description,
                 "restricted_status": station.restricted_status,
             }
@@ -45,11 +52,13 @@ for network in station_inventory:
                     "station_code": station.code,
                     "channel_code": channel.code,
                     "location_code": channel.location_code,
-                    "active": channel.is_active(),
-                    "start_date": channel.start_date.datetime
+                    "active": 1 if channel.is_active() else 0,
+                    "start_date": channel.start_date.datetime.isoformat()
                     if channel.start_date
                     else None,
-                    "end_date": channel.end_date.datetime if channel.end_date else None,
+                    "end_date": channel.end_date.datetime.isoformat()
+                    if channel.end_date
+                    else None,
                     "sample_rate": channel.sample_rate,
                     "azimuth": channel.azimuth,
                     "depth": channel.depth,
@@ -58,17 +67,10 @@ for network in station_inventory:
                 }
             )
 
-station_df = pd.DataFrame(station_rows)
-station_df["start_date"] = pd.to_datetime(station_df["start_date"], utc=True)
-station_df["end_date"] = pd.to_datetime(station_df["end_date"], utc=True)
-station_df.to_parquet(SAVE_BASE_DIR / "stations.parquet", index=False)
-print(station_df)
+with sqlite3.connect(DATABASE) as conn:
+    queries.upsert_station(conn, station_rows)
+    queries.upsert_channel(conn, channel_rows)
 
-channel_df = pd.DataFrame(channel_rows)
-channel_df["start_date"] = pd.to_datetime(channel_df["start_date"], utc=True)
-channel_df["end_date"] = pd.to_datetime(channel_df["end_date"], utc=True)
-channel_df.to_parquet(SAVE_BASE_DIR / "channels.parquet", index=False)
-print(channel_df)
-
+print(f"Upserted {len(station_rows)} stations and {len(channel_rows)} channels")
 
 # %%
