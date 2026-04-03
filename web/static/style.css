@@ -1,7 +1,7 @@
 :root {
-    --station-panel-width: 30vw;
-    --station-panel-chart-height: 20vh;
-    --station-panel-mobile-height: 45vh;
+    --panel-width: 30vw;
+    --panel-chart-height: 20vh;
+    --panel-mobile-height: 40vh;
     --mobile-breakpoint: 1200;
     --background-color-dark: #111;
     --background-color-dark-secondary: #333;
@@ -85,7 +85,7 @@ header h1 {
 /* ---- Station panel ---- */
 
 #station-panel {
-    width: var(--station-panel-width);
+    width: var(--panel-width);
     overflow: hidden;
     background: var(--background-color-dark);
     display: flex;
@@ -132,7 +132,7 @@ header h1 {
 .channel-canvas {
     display: block;
     width: 100%;
-    height: var(--station-panel-chart-height);
+    height: var(--panel-chart-height);
     background: var(--background-color-dark);
 }
 
@@ -140,7 +140,7 @@ header h1 {
 /* ---- Event panel ---- */
 
 #event-panel {
-    width: var(--station-panel-width);
+    width: var(--panel-width);
     overflow: hidden;
     background: var(--background-color-dark);
     display: none;
@@ -231,13 +231,13 @@ header h1 {
 
     #station-panel {
         width: 100%;
-        height: var(--station-panel-mobile-height);
+        height: var(--panel-mobile-height);
         border-left: none;
     }
 
     #event-panel {
         width: 100%;
-        height: var(--station-panel-mobile-height);
+        height: var(--panel-mobile-height);
         border-left: none;
     }
 
