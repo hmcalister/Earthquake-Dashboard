@@ -25,6 +25,10 @@
     <body>
         <header>
             <h1>NZ Earthquake Dashboard</h1>
+            <nav id="mode-nav">
+                <a href="?mode=stations" id="nav-stations">Stations</a>
+                <a href="?mode=events" id="nav-events">Events</a>
+            </nav>
             <div id="utc-clock"></div>
         </header>
 
@@ -46,6 +50,20 @@
                     ></div>
                 </div>
                 <div id="station-panel-body"></div>
+            </div>
+
+            <div id="event-panel">
+                <div id="event-panel-header">
+                    <div id="event-panel-title">Recent Events</div>
+                    <div id="event-panel-subtitle" class="station-panel-subtext"></div>
+                    <select id="event-timeframe">
+                        <option value="1h">Last hour</option>
+                        <option value="24h" selected>Last 24 hours</option>
+                        <option value="1w">Last week</option>
+                        <option value="1m">Last month</option>
+                    </select>
+                </div>
+                <div id="event-panel-body"></div>
             </div>
         </div>
 

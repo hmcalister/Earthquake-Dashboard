@@ -14,11 +14,9 @@ export function resetStationPanel() {
 }
 
 export function openStationPanel(s) {
-  history.replaceState(
-    null,
-    "",
-    `#station=${encodeURIComponent(s.station_code)}`,
-  );
+  const params = new URLSearchParams(location.search);
+  params.set("station", s.station_code);
+  history.replaceState(null, "", "?" + params.toString());
   panelTitle.textContent = `${s.station_code} — ${s.station_name}`;
   panelSubtitle.textContent = `${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)}  ·  ${s.elevation_m} m`;
   panelMeasuredAt.textContent = "";
